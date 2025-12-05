@@ -1,0 +1,307 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+datasource db {
+  provider = "mysql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  USER
+  READONLY
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING_APPROVAL
+}
+
+enum ConnectionStatus {
+  CONNECTED
+  DISCONNECTED
+}
+
+enum AlertType {
+  GEOGRAPHIC_ANOMALY
+  FIRST_CONNECTION_NEW_COUNTRY
+  MULTIPLE_FAILED_ATTEMPTS
+  SUSPICIOUS_PATTERN
+  INACTIVE_USER_RECONNECTED
+  HIGH_RISK_COUNTRY
+}
+
+enum AlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AlertStatus {
+  PENDING
+  ACKNOWLEDGED
+  RESOLVED
+  IGNORED
+}
+
+model SystemUser {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  password  String
+  firstName String
+  lastName  String
+  role      UserRole  @default(USER)
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  lastLogin DateTime?
+
+  createdVpnUsers    VpnUser[]  @relation("CreatedBy")
+  updatedVpnUsers    VpnUser[]  @relation("UpdatedBy")
+  auditLogs          AuditLog[]
+  createdAlerts      Alert[]    @relation("CreatedAlerts")
+  acknowledgedAlerts Alert[]    @relation("AcknowledgedAlerts")
+
+  @@map("system_users")
+}
+
+model VpnUser {
+  id               String  @id @default(uuid())
+  username         String  @unique
+  email            String
+  alternativeEmail String?
+  firstName        String
+  lastName         String
+  department       String?
+  position         String?
+
+  status          UserStatus @default(ACTIVE)
+  fortiGateUserId String?    @unique
+
+  lastConnection        DateTime?
+  lastConnectionIp      String?
+  lastConnectionCountry String?
+  lastConnectionCity    String?
+
+  createdInFortiGate  Boolean   @default(false)
+  syncedWithFortiGate Boolean   @default(false)
+  lastSyncAt          DateTime?
+
+  trackingStartDate       DateTime @default(now())
+  historicalDataAvailable Boolean  @default(false)
+
+  policyAcceptedAt    DateTime?
+  twoFactorEnabled    Boolean   @default(false)
+  twoFactorNotifiedAt DateTime?
+
+  notes String? @db.Text
+
+  createdById String
+  createdBy   SystemUser @relation("CreatedBy", fields: [createdById], references: [id])
+
+  updatedById String?
+  updatedBy   SystemUser? @relation("UpdatedBy", fields: [updatedById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  connectionLogs      ConnectionLog[]
+  alerts              Alert[]
+  auditLogs           AuditLog[]
+  notificationHistory NotificationLog[]
+  travelRegistrations TravelRegistration[]
+
+  @@index([username])
+  @@index([status])
+  @@index([lastConnection])
+  @@index([syncedWithFortiGate])
+  @@map("vpn_users")
+}
+
+model ConnectionLog {
+  id        String  @id @default(uuid())
+  vpnUserId String
+  vpnUser   VpnUser @relation(fields: [vpnUserId], references: [id], onDelete: Cascade)
+
+  connectionStatus ConnectionStatus
+  ipAddress        String
+  country          String?
+  countryCode      String?
+  city             String?
+  latitude         Float?
+  longitude        Float?
+
+  connectedAt     DateTime
+  disconnectedAt  DateTime?
+  durationSeconds Int?
+
+  bytesReceived Int?
+  bytesSent     Int?
+
+  deviceInfo String?
+
+  isAnomaly     Boolean @default(false)
+  anomalyReason String? @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([vpnUserId])
+  @@index([connectedAt])
+  @@index([country])
+  @@index([isAnomaly])
+  @@map("connection_logs")
+}
+
+model Alert {
+  id        String  @id @default(uuid())
+  vpnUserId String
+  vpnUser   VpnUser @relation(fields: [vpnUserId], references: [id], onDelete: Cascade)
+
+  type     AlertType
+  severity AlertSeverity
+  status   AlertStatus   @default(PENDING)
+
+  title       String
+  description String @db.Text
+  metadata    Json?
+
+  ipAddress       String?
+  country         String?
+  previousCountry String?
+
+  detectedAt DateTime @default(now())
+
+  createdById String?
+  createdBy   SystemUser? @relation("CreatedAlerts", fields: [createdById], references: [id])
+
+  acknowledgedById String?
+  acknowledgedBy   SystemUser? @relation("AcknowledgedAlerts", fields: [acknowledgedById], references: [id])
+  acknowledgedAt   DateTime?
+
+  resolvedAt DateTime?
+  resolution String?   @db.Text
+
+  notificationSent   Boolean   @default(false)
+  notificationSentAt DateTime?
+
+  @@index([vpnUserId])
+  @@index([status])
+  @@index([severity])
+  @@index([detectedAt])
+  @@map("alerts")
+}
+
+model TravelRegistration {
+  id        String  @id @default(uuid())
+  vpnUserId String
+  vpnUser   VpnUser @relation(fields: [vpnUserId], references: [id], onDelete: Cascade)
+
+  countries Json
+  startDate DateTime
+  endDate   DateTime
+
+  purpose String?
+  notes   String? @db.Text
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([vpnUserId])
+  @@index([startDate, endDate])
+  @@map("travel_registrations")
+}
+
+model AuditLog {
+  id String @id @default(uuid())
+
+  entityType String
+  entityId   String?
+
+  action         String
+  changes        Json?
+  previousValues Json?
+  newValues      Json?
+
+  ipAddress String?
+  userAgent String?
+
+  performedById String
+  performedBy   SystemUser @relation(fields: [performedById], references: [id])
+
+  vpnUserId String?
+  vpnUser   VpnUser? @relation(fields: [vpnUserId], references: [id])
+
+  timestamp DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([performedById])
+  @@index([timestamp])
+  @@map("audit_logs")
+}
+
+model NotificationLog {
+  id        String   @id @default(uuid())
+  vpnUserId String?
+  vpnUser   VpnUser? @relation(fields: [vpnUserId], references: [id])
+
+  recipientEmail String
+  subject        String
+  templateName   String
+
+  status       String
+  errorMessage String?
+
+  metadata Json?
+
+  sentAt DateTime @default(now())
+
+  @@index([vpnUserId])
+  @@index([sentAt])
+  @@map("notification_logs")
+}
+
+model SystemConfiguration {
+  id          String  @id @default(uuid())
+  key         String  @unique
+  value       String
+  description String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("system_configurations")
+}
+
+model FortiGateSyncLog {
+  id String @id @default(uuid())
+
+  syncType String
+  status   String
+
+  usersProcessed Int @default(0)
+  usersCreated   Int @default(0)
+  usersUpdated   Int @default(0)
+  usersFailed    Int @default(0)
+
+  errorDetails Json?
+  metadata     Json?
+
+  startedAt   DateTime
+  completedAt DateTime?
+  durationMs  Int?
+
+  @@index([startedAt])
+  @@map("fortigate_sync_logs")
+}
