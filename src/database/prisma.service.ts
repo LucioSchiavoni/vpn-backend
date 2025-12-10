@@ -35,17 +35,8 @@ export class PrismaService
     private setupLogging(enableLogging: boolean) {
         if (!enableLogging) return;
 
-        this.$on('query', (e: any) => {
-            if (e.duration > 1000) {
-                this.logger.warn(
-                    `Slow query detected: ${e.duration}ms - ${e.query.substring(0, 100)}`,
-                );
-            }
-        });
 
-        this.$on('error', (e: any) => {
-            this.logger.error(`Database error: ${e.message}`);
-        });
+        this.logger.log('Prisma logging enabled via configuration');
     }
 
     async onModuleInit() {
