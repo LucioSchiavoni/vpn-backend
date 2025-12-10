@@ -19,8 +19,8 @@ export class VpnUserRepository {
     }
 
     async findByAlternateEmail(email: string): Promise<VpnUser | null> {
-        return this.prisma.vpnUser.findUnique({
-            where: { alternateEmail: email },
+        return this.prisma.vpnUser.findFirst({
+            where: { alternativeEmail: email },
         });
     }
 
