@@ -4,6 +4,7 @@ export interface CurrentUserPayload {
     userId: string;
     email: string;
     role: string;
+    sessionId?: string;
 }
 
 export const CurrentUser = createParamDecorator(

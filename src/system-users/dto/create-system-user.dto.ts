@@ -1,6 +1,7 @@
 
-import { IsEmail, IsEnum, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsEnum, IsNotEmpty, IsString, MinLength, Validate } from 'class-validator';
 import { UserRole } from '@prisma/client';
+import { IsStrongPassword } from '../../auth/validators/password.validator';
 
 export class CreateSystemUserDto {
     @IsEmail({}, { message: 'El email debe ser válido' })
@@ -8,7 +9,7 @@ export class CreateSystemUserDto {
     email: string;
 
     @IsString({ message: 'La contraseña debe ser texto' })
-    @MinLength(8, { message: 'La contraseña debe tener al menos 8 caracteres' })
+    @Validate(IsStrongPassword)
     @IsNotEmpty({ message: 'La contraseña es requerida' })
     password: string;
 

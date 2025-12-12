@@ -43,7 +43,7 @@ export class SystemUsersService {
             },
         });
 
-        return this.exclude(user, ['password', 'refreshToken']);
+        return this.exclude(user, ['password']);
     }
 
     async findAll() {
@@ -51,7 +51,7 @@ export class SystemUsersService {
             orderBy: { createdAt: 'desc' },
         });
 
-        return users.map((user) => this.exclude(user, ['password', 'refreshToken']));
+        return users.map((user) => this.exclude(user, ['password']));
     }
 
     async findOne(id: string) {
@@ -63,7 +63,7 @@ export class SystemUsersService {
             throw new NotFoundException('Usuario no encontrado');
         }
 
-        return this.exclude(user, ['password', 'refreshToken']);
+        return this.exclude(user, ['password']);
     }
 
     async update(id: string, updateSystemUserDto: UpdateSystemUserDto) {
@@ -92,7 +92,7 @@ export class SystemUsersService {
             data: data,
         });
 
-        return this.exclude(updatedUser, ['password', 'refreshToken']);
+        return this.exclude(updatedUser, ['password']);
     }
 
     async changePassword(id: string, changePasswordDto: ChangePasswordDto) {
@@ -128,6 +128,6 @@ export class SystemUsersService {
             data: { isActive: false },
         });
 
-        return this.exclude(updatedUser, ['password', 'refreshToken']);
+        return this.exclude(updatedUser, ['password']);
     }
 }

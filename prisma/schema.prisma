@@ -55,23 +55,30 @@ enum AlertStatus {
 }
 
 model SystemUser {
-  id           String    @id @default(uuid())
-  email        String    @unique
-  password     String
-  firstName    String
-  lastName     String
-  role         UserRole  @default(USER)
-  isActive     Boolean   @default(true)
-  refreshToken String?   @db.Text
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  lastLogin    DateTime?
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  firstName String
+  lastName  String
+  role      UserRole @default(USER)
+  isActive  Boolean  @default(true)
 
-  createdVpnUsers    VpnUser[]  @relation("CreatedBy")
-  updatedVpnUsers    VpnUser[]  @relation("UpdatedBy")
+  failedLoginAttempts Int       @default(0)
+  lastFailedAttempt   DateTime?
+  isLocked            Boolean   @default(false)
+  lockedUntil         DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  lastLogin DateTime?
+
+  createdVpnUsers    VpnUser[]      @relation("CreatedBy")
+  updatedVpnUsers    VpnUser[]      @relation("UpdatedBy")
   auditLogs          AuditLog[]
-  createdAlerts      Alert[]    @relation("CreatedAlerts")
-  acknowledgedAlerts Alert[]    @relation("AcknowledgedAlerts")
+  createdAlerts      Alert[]        @relation("CreatedAlerts")
+  acknowledgedAlerts Alert[]        @relation("AcknowledgedAlerts")
+  sessions           Session[]
+  loginAttempts      LoginAttempt[]
 
   @@map("system_users")
 }
@@ -305,4 +312,39 @@ model FortiGateSyncLog {
 
   @@index([startedAt])
   @@map("fortigate_sync_logs")
+}
+
+model Session {
+  id                String     @id @default(uuid())
+  userId            String
+  user              SystemUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshToken      String     @db.Text
+  ipAddress         String     @db.VarChar(45)
+  userAgent         String?    @db.VarChar(500)
+  deviceFingerprint String?    @db.VarChar(255)
+  createdAt         DateTime   @default(now())
+  lastActivityAt    DateTime   @default(now())
+  expiresAt         DateTime
+  isRevoked         Boolean    @default(false)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model LoginAttempt {
+  id            String      @id @default(uuid())
+  userId        String?
+  user          SystemUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  email         String      @db.VarChar(255)
+  ipAddress     String      @db.VarChar(45)
+  userAgent     String?     @db.VarChar(500)
+  success       Boolean
+  failureReason String?     @db.VarChar(255)
+  createdAt     DateTime    @default(now())
+
+  @@index([userId])
+  @@index([email])
+  @@index([createdAt])
+  @@map("login_attempts")
 }
