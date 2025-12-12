@@ -6,6 +6,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
+import { SystemUsersModule } from './system-users/system-users.module';
 
 @Module({
   imports: [
@@ -16,11 +17,12 @@ import { AuthModule } from './auth/auth.module';
     ThrottlerModule.forRoot([
       {
         ttl: 60000, // 60 segundos
-        limit: 100, // 100 requests por minuto (default global)
+        limit: 100, // 100 requests por minuto 
       },
     ]),
     DatabaseModule,
     AuthModule,
+    SystemUsersModule,
   ],
   controllers: [AppController],
   providers: [

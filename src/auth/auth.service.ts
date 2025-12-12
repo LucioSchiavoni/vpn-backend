@@ -59,7 +59,6 @@ export class AuthService {
         const tokens = await this.generateTokens(user.id, user.email, user.role);
         await this.updateRefreshToken(user.id, tokens.refreshToken);
 
-        // Actualizar lastLogin
         await this.prisma.systemUser.update({
             where: { id: user.id },
             data: { lastLogin: new Date() },
